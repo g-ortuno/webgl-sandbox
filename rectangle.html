@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>WebGL</title>
+  <style>
+  body {
+    margin: 0;
+  }
+
+  canvas {
+    width: 800px;
+    height: calc(800px * 3 / 4);
+    display: block;
+  }
+  </style>
+</head>
+<body>
+  <canvas id="glcanvas"></canvas>
+</body>
+<script id="2d-vertex-shader" type="notjs">
+/* Provices Coordinates to WebGL */
+
+// An attribute will receive data from a buffer.
+attribute vec2 a_position;
+
+uniform vec2 u_resolution;
+
+void main() {
+  // Convert from pixels to clipspace.
+  vec2 zeroToOne = a_position / u_resolution;
+  vec2 zeroToTwo = zeroToOne * 2.0;
+  vec2 flippedClipSpace = zeroToTwo - 1.0;
+  vec2 clipSpace = flippedClipSpace * vec2(1, -1);
+
+  // gl_Position is a special variable that a fragment
+  // shader is supposed to set.
+  gl_Position = vec4(clipSpace, 0, 1);
+}
+</script>
+
+<script id="2d-fragment-shader" type="notjs">
+/* Provides Color to WebGL */
+
+precision mediump float;
+
+uniform vec4 u_color;
+
+void main() {
+  // gl_FlagColor is a special variable that a fragment
+  // shader is supposed to set.
+  gl_FragColor = u_color;
+}
+</script>
+
+<script>
+let GOOGLE_BLUE = [0.129, 0.588, 0.953, 1];
+
+// Matches drawingbuffer to the display size of |canvas|.
+function resize(canvas) {
+  let ratio =  window.devicePixelRatio;
+
+  let displayWidth = Math.floor(canvas.clientWidth * ratio);
+  let displayHeight = Math.floor(canvas.clientHeight * ratio);
+
+  if (canvas.width === displayWidth && canvas.height === displayHeight) {
+    return;
+  }
+
+  canvas.width = displayWidth;
+  canvas.height = displayHeight;
+}
+
+// Compiles |source| into a shader of |type|.
+function create_shader(gl, type, source) {
+  let shader = gl.createShader(type);
+  gl.shaderSource(shader, source);
+  gl.compileShader(shader);
+  let success = gl.getShaderParameter(
+    shader, gl.COMPILE_STATUS);
+
+  if (!success) {
+    console.log(gl.getShaderInfoLog(shader));
+    gl.deleteShader(shader);
+  }
+
+  return shader;
+}
+
+// Creates a WebGL program and attaches |vertex_shader| and
+// |fragment_shader|. Returns the newly created program.
+function create_program(gl, vertex_shader, fragment_shader) {
+  let program = gl.createProgram();
+  gl.attachShader(program, vertex_shader);
+  gl.attachShader(program, fragment_shader);
+  gl.linkProgram(program);
+  let success = gl.getProgramParameter(program, gl.LINK_STATUS);
+  if (!success) {
+    console.log(gl.getProgramInfoLog(program));
+    gl.deleteProgram(program);
+  }
+  return program;
+}
+
+document.addEventListener('DOMContentLoaded', event => {
+  let canvas = document.getElementById('glcanvas');
+
+  let gl = canvas.getContext('webgl2');
+  if (!gl) {
+    throw 'No GL';
+  }
+
+  let vertex_shader_src = document.getElementById('2d-vertex-shader');
+  let fragment_shader_src = document.getElementById('2d-fragment-shader');
+
+  let vertex_shader = create_shader(
+    gl, gl.VERTEX_SHADER, vertex_shader_src.text);
+  let fragment_shader = create_shader(
+    gl, gl.FRAGMENT_SHADER, fragment_shader_src.text);
+
+  let program = create_program(gl, vertex_shader, fragment_shader);
+
+  let position_attr_loc = gl.getAttribLocation(program, 'a_position');
+  let position_buffer = gl.createBuffer();
+
+  let resolution_uni_loc = gl.getUniformLocation(program, 'u_resolution');
+  let color_uni_loc = gl.getUniformLocation(program, 'u_color');
+
+  drawScene();
+
+  function drawScene() {
+    resize(canvas);
+
+    gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
+
+    gl.clearColor(1, 1, 1, 1);
+    gl.clear(gl.COLOR_BUFFER_BIT);
+
+    gl.useProgram(program);
+
+    gl.uniform2f(resolution_uni_loc, gl.canvas.width, gl.canvas.height);
+    gl.uniform4f(color_uni_loc, ...GOOGLE_BLUE);
+
+    var positions = [
+      100, 200,
+      800, 200,
+      100, 300,
+      100, 300,
+      800, 200,
+      800, 300,
+    ];
+
+    gl.bindBuffer(gl.ARRAY_BUFFER, position_buffer);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(positions), gl.STATIC_DRAW);
+    gl.enableVertexAttribArray(position_attr_loc);
+    gl.vertexAttribPointer(
+      position_attr_loc,
+      2 /* size */,
+      gl.FLOAT /* type */,
+      false /* normalize */,
+      0 /* stride */,
+      0 /* offset */);
+
+    gl.drawArrays(
+      gl.TRIANGLES /* primitiveType */,
+      0 /* offset */,
+      6 /* count */);
+  }
+});
+
+</script>
+</html>
