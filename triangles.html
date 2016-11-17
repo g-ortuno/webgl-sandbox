@@ -136,8 +136,10 @@ document.addEventListener('DOMContentLoaded', event => {
   gl.useProgram(program);
 
   gl.uniform2f(resolution_uni_loc, gl.canvas.width, gl.canvas.height);
+  gl.uniform4f(color_uni_loc, ...GOOGLE_BLUE);
+
   let animation_loop = (timestamp) => {
-    /* window.requestAnimationFrame(animation_loop); */
+    window.requestAnimationFrame(animation_loop);
     /* update(); */
     render();
   };
@@ -157,40 +159,20 @@ document.addEventListener('DOMContentLoaded', event => {
       0 /* stride */,
       0 /* offset */);
 
-    let num_triangles = 100;
-    function getRandomInt(max) {
-      max = Math.floor(max);
-      return Math.floor(Math.random() * max);
-    }
+    var positions = [
+      100, 200,
+      800, 200,
+      100, 300,
+      100, 300,
+      800, 200,
+      800, 300,
+    ];
 
-    for(let i = 0; i < num_triangles; i++) {
-      let max_x = gl.canvas.width;
-      let max_y = gl.canvas.height;
-      let x1 = getRandomInt(max_x);
-      let y1 = getRandomInt(max_y);
-      let x2 = getRandomInt(max_x);
-      let y2 = getRandomInt(max_y);
-      let x3 = getRandomInt(max_x);
-      let y3 = getRandomInt(max_y);
-
-      let r = Math.random();
-      let g = Math.random();
-      let b = Math.random();
-      let a = 1;
-      gl.uniform4f(color_uni_loc, ...[r, g, b, a]);
-
-
-      gl.bufferData(gl.ARRAY_BUFFER,
-                    new Float32Array([
-                      x1, y1,
-                      x2, y2,
-                      x3, y3]),
-                    gl.STATIC_DRAW);
-      gl.drawArrays(
-        gl.TRIANGLES /* primitiveType */,
-        0 /* offset */,
-        3 /* count */);
-    }
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(positions), gl.STATIC_DRAW);
+    gl.drawArrays(
+      gl.TRIANGLES /* primitiveType */,
+      0 /* offset */,
+      6 /* count */);
   }
 });
 
