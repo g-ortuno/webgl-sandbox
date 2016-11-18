@@ -10,8 +10,10 @@
   }
 
   canvas {
-    width: 800px;
-    height: calc(800px * 3 / 4);
+    /* width: 800px;
+       height: calc(800px * 3 / 4); */
+    width: 100vw;
+    height: 100vh;
     display: block;
   }
   </style>
@@ -177,14 +179,13 @@ document.addEventListener('DOMContentLoaded', event => {
     keys.delete(event.key);
   });
 
-  let step = 2;
+  let step = 1;
   window.setInterval(() => {
-
-    if (keys.has('ArrowUp') && current_translation[1]  - step > 0)
+    if (keys.has('ArrowUp') && current_translation[1]  - step >= 0)
       current_translation[1] -= step;
 
     if (keys.has('ArrowDown') &&
-      current_translation[1] + step < gl.canvas.height - RECTANGLE_HEIGHT)
+      current_translation[1] + step <= gl.canvas.height - RECTANGLE_HEIGHT)
         current_translation[1] += step;
   }, 1);
 
