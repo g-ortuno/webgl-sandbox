@@ -26,10 +26,14 @@
 attribute vec2 a_position;
 
 uniform vec2 u_resolution;
+uniform vec2 u_translation;
 
 void main() {
+  // Translate.
+  vec2 translated = a_position + u_translation;
+
   // Convert from pixels to clipspace.
-  vec2 zeroToOne = a_position / u_resolution;
+  vec2 zeroToOne = translated / u_resolution;
   vec2 zeroToTwo = zeroToOne * 2.0;
   vec2 flippedClipSpace = zeroToTwo - 1.0;
   vec2 clipSpace = flippedClipSpace * vec2(1, -1);
@@ -55,8 +59,6 @@ void main() {
 </script>
 
 <script>
-let GOOGLE_BLUE = [0.129, 0.588, 0.953, 1];
-
 // Matches drawingbuffer to the display size of |canvas|.
 function resize(canvas) {
   let ratio =  window.devicePixelRatio;
@@ -104,6 +106,9 @@ function create_program(gl, vertex_shader, fragment_shader) {
 }
 
 document.addEventListener('DOMContentLoaded', event => {
+  let RECTANGLE_WIDTH = 50;
+  let RECTANGLE_HEIGHT = 200;
+
   let canvas = document.getElementById('glcanvas');
   let gl = canvas.getContext('webgl2');
   if (!gl) {
@@ -113,9 +118,7 @@ document.addEventListener('DOMContentLoaded', event => {
   resize(canvas);
 
   gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
-
-  gl.clearColor(1, 1, 1, 1);
-  gl.clear(gl.COLOR_BUFFER_BIT);
+  let P1_OFFSET = 50;
 
   let vertex_shader_src = document.getElementById('2d-vertex-shader');
   let fragment_shader_src = document.getElementById('2d-fragment-shader');
@@ -126,18 +129,67 @@ document.addEventListener('DOMContentLoaded', event => {
     gl, gl.FRAGMENT_SHADER, fragment_shader_src.text);
 
   let program = create_program(gl, vertex_shader, fragment_shader);
+  gl.useProgram(program);
+
+  let resolution_uni_loc = gl.getUniformLocation(program, 'u_resolution');
+  gl.uniform2f(resolution_uni_loc, gl.canvas.width, gl.canvas.height);
+  let color_uni_loc = gl.getUniformLocation(program, 'u_color');
+  gl.uniform4f(color_uni_loc, ...[1, 1, 1, 1]);
+
+  let current_translation = [0, 0];
+  let translation_uni_loc = gl.getUniformLocation(program, 'u_translation');
+  gl.uniform2f(translation_uni_loc, ...current_translation);
 
   let position_attr_loc = gl.getAttribLocation(program, 'a_position');
   let position_buffer = gl.createBuffer();
+  gl.bindBuffer(gl.ARRAY_BUFFER, position_buffer);
+  gl.enableVertexAttribArray(position_attr_loc);
+  gl.vertexAttribPointer(
+    position_attr_loc,
+    2 /* size */,
+    gl.FLOAT /* type */,
+    false /* normalize */,
+    0 /* stride */,
+    0 /* offset */);
 
-  let resolution_uni_loc = gl.getUniformLocation(program, 'u_resolution');
-  let color_uni_loc = gl.getUniformLocation(program, 'u_color');
+  function getRectangleVertices(width, height, offset) {
+    return [
+      offset, 0,
+      offset + width, 0,
+      offset, height,
+      offset, height,
+      offset + width, height,
+      offset + width, 0
+    ];
+  }
 
-  gl.useProgram(program);
+  let positions = getRectangleVertices(RECTANGLE_WIDTH,
+                                       RECTANGLE_HEIGHT,
+                                       P1_OFFSET);
 
-  gl.uniform2f(resolution_uni_loc, gl.canvas.width, gl.canvas.height);
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(positions), gl.STATIC_DRAW);
+
+  let keys = new Set();
+  window.addEventListener('keydown', (event) => {
+    keys.add(event.key);
+  });
+  window.addEventListener('keyup', (event) => {
+    keys.delete(event.key);
+  });
+
+  let step = 2;
+  window.setInterval(() => {
+
+    if (keys.has('ArrowUp') && current_translation[1]  - step > 0)
+      current_translation[1] -= step;
+
+    if (keys.has('ArrowDown') &&
+      current_translation[1] + step < gl.canvas.height - RECTANGLE_HEIGHT)
+        current_translation[1] += step;
+  }, 1);
+
   let animation_loop = (timestamp) => {
-    /* window.requestAnimationFrame(animation_loop); */
+    window.requestAnimationFrame(animation_loop);
     /* update(); */
     render();
   };
@@ -145,52 +197,15 @@ document.addEventListener('DOMContentLoaded', event => {
   window.requestAnimationFrame(animation_loop);
 
   function render() {
+    gl.clearColor(0, 0, 0, 1);
     gl.clear(gl.COLOR_BUFFER_BIT);
 
-    gl.bindBuffer(gl.ARRAY_BUFFER, position_buffer);
-    gl.enableVertexAttribArray(position_attr_loc);
-    gl.vertexAttribPointer(
-      position_attr_loc,
-      2 /* size */,
-      gl.FLOAT /* type */,
-      false /* normalize */,
-      0 /* stride */,
-      0 /* offset */);
+    gl.uniform2f(translation_uni_loc, ...current_translation);
 
-    let num_triangles = 100;
-    function getRandomInt(max) {
-      max = Math.floor(max);
-      return Math.floor(Math.random() * max);
-    }
-
-    for(let i = 0; i < num_triangles; i++) {
-      let max_x = gl.canvas.width;
-      let max_y = gl.canvas.height;
-      let x1 = getRandomInt(max_x);
-      let y1 = getRandomInt(max_y);
-      let x2 = getRandomInt(max_x);
-      let y2 = getRandomInt(max_y);
-      let x3 = getRandomInt(max_x);
-      let y3 = getRandomInt(max_y);
-
-      let r = Math.random();
-      let g = Math.random();
-      let b = Math.random();
-      let a = 1;
-      gl.uniform4f(color_uni_loc, ...[r, g, b, a]);
-
-
-      gl.bufferData(gl.ARRAY_BUFFER,
-                    new Float32Array([
-                      x1, y1,
-                      x2, y2,
-                      x3, y3]),
-                    gl.STATIC_DRAW);
-      gl.drawArrays(
-        gl.TRIANGLES /* primitiveType */,
-        0 /* offset */,
-        3 /* count */);
-    }
+    gl.drawArrays(
+      gl.TRIANGLES /* primitiveType */,
+      0 /* offset */,
+      6 /* count */);
   }
 });
 
