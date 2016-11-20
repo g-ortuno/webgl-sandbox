@@ -195,7 +195,7 @@ document.addEventListener('DOMContentLoaded', event => {
   window.requestAnimationFrame(animation_loop);
 
   let then = 0;
-  let step = 2; // Pixel per millisecond.
+  let step = 1; // Pixel per millisecond.
   function update(timestamp) {
     // 1 px / 1 ms * delta ms.
     let delta = timestamp - then;
