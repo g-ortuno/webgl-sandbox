@@ -161,8 +161,9 @@ document.addEventListener('DOMContentLoaded', event => {
   function render() {
     gl.clear(gl.COLOR_BUFFER_BIT);
 
-    let num_triangles = 100;
+    let num_triangles = 10;
     for(let i = 0; i < num_triangles; i++) {
+
       // Set color.
       let [r, g, b] = Array.from({length: 3}, () => Math.random());
       gl.uniform4f(color_uni_loc, r, g, b, 1);

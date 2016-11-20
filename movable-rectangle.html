@@ -108,20 +108,44 @@ function create_program(gl, vertex_shader, fragment_shader) {
 }
 
 document.addEventListener('DOMContentLoaded', event => {
+  let BACKGROUND_COLOR = [0, 0, 0, 1];
+  let RECTANGLE_COLOR = [1, 1, 1, 1];
+
   let RECTANGLE_WIDTH = 50;
   let RECTANGLE_HEIGHT = 200;
+  let P1_OFFSET = 50;
 
+  let pressed_keys_ = new Set();
+  window.addEventListener('keydown', (event) => {
+    pressed_keys_.add(event.key);
+  });
+  window.addEventListener('keyup', (event) => {
+    pressed_keys_.delete(event.key);
+  });
+
+  // Set up canvas.
   let canvas = document.getElementById('glcanvas');
   let gl = canvas.getContext('webgl2');
   if (!gl) {
     throw 'No GL';
   }
-
   resize(canvas);
-
   gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
-  let P1_OFFSET = 50;
 
+  // Set up update loop.
+  let step = 10;
+  let current_translation_ = [0, 0];
+  let update_translation = () => {
+    if (pressed_keys_.has('ArrowUp') && current_translation_[1]  - step >= 0)
+      current_translation_[1] -= step;
+
+    if (pressed_keys_.has('ArrowDown') &&
+      current_translation_[1] + step <= gl.canvas.height - RECTANGLE_HEIGHT)
+      current_translation_[1] += step;
+  };
+  window.setInterval(update_translation, 1);
+
+  // Set up program.
   let vertex_shader_src = document.getElementById('2d-vertex-shader');
   let fragment_shader_src = document.getElementById('2d-fragment-shader');
 
@@ -133,19 +157,23 @@ document.addEventListener('DOMContentLoaded', event => {
   let program = create_program(gl, vertex_shader, fragment_shader);
   gl.useProgram(program);
 
-  let resolution_uni_loc = gl.getUniformLocation(program, 'u_resolution');
-  gl.uniform2f(resolution_uni_loc, gl.canvas.width, gl.canvas.height);
-  let color_uni_loc = gl.getUniformLocation(program, 'u_color');
-  gl.uniform4f(color_uni_loc, ...[1, 1, 1, 1]);
-
-  let current_translation = [0, 0];
-  let translation_uni_loc = gl.getUniformLocation(program, 'u_translation');
-  gl.uniform2f(translation_uni_loc, ...current_translation);
-
+  // Set up locations.
   let position_attr_loc = gl.getAttribLocation(program, 'a_position');
+  let resolution_uni_loc = gl.getUniformLocation(program, 'u_resolution');
+  let color_uni_loc = gl.getUniformLocation(program, 'u_color');
+  let translation_uni_loc = gl.getUniformLocation(program, 'u_translation');
+
+  // Set initial values.
+  gl.uniform2f(resolution_uni_loc, gl.canvas.width, gl.canvas.height);
+  gl.uniform4f(color_uni_loc, ...RECTANGLE_COLOR);
+  gl.uniform2f(translation_uni_loc, ...current_translation_);
+
+  // Create buffers.
   let position_buffer = gl.createBuffer();
-  gl.bindBuffer(gl.ARRAY_BUFFER, position_buffer);
+
+  // Set up VAO.
   gl.enableVertexAttribArray(position_attr_loc);
+  gl.bindBuffer(gl.ARRAY_BUFFER, position_buffer);
   gl.vertexAttribPointer(
     position_attr_loc,
     2 /* size */,
@@ -168,40 +196,19 @@ document.addEventListener('DOMContentLoaded', event => {
   let positions = getRectangleVertices(RECTANGLE_WIDTH,
                                        RECTANGLE_HEIGHT,
                                        P1_OFFSET);
-
   gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(positions), gl.STATIC_DRAW);
-
-  let keys = new Set();
-  window.addEventListener('keydown', (event) => {
-    keys.add(event.key);
-  });
-  window.addEventListener('keyup', (event) => {
-    keys.delete(event.key);
-  });
-
-  let step = 1;
-  window.setInterval(() => {
-    if (keys.has('ArrowUp') && current_translation[1]  - step >= 0)
-      current_translation[1] -= step;
-
-    if (keys.has('ArrowDown') &&
-      current_translation[1] + step <= gl.canvas.height - RECTANGLE_HEIGHT)
-        current_translation[1] += step;
-  }, 1);
 
   let animation_loop = (timestamp) => {
     window.requestAnimationFrame(animation_loop);
-    /* update(); */
     render();
   };
-
   window.requestAnimationFrame(animation_loop);
 
   function render() {
-    gl.clearColor(0, 0, 0, 1);
+    gl.clearColor(...BACKGROUND_COLOR);
     gl.clear(gl.COLOR_BUFFER_BIT);
 
-    gl.uniform2f(translation_uni_loc, ...current_translation);
+    gl.uniform2f(translation_uni_loc, ...current_translation_);
 
     gl.drawArrays(
       gl.TRIANGLES /* primitiveType */,
