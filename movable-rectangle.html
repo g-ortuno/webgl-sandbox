@@ -115,7 +115,7 @@ document.addEventListener('DOMContentLoaded', event => {
   let RECTANGLE_HEIGHT = 200;
   let P1_OFFSET = 50;
 
-  let current_translation_ = [0, 0];
+  let xy_ = [0, 0];
 
   let pressed_keys_ = new Set();
   window.addEventListener('keydown', (event) => {
@@ -155,7 +155,7 @@ document.addEventListener('DOMContentLoaded', event => {
   // Set initial values.
   gl.uniform2f(resolution_uni_loc, gl.canvas.width, gl.canvas.height);
   gl.uniform4f(color_uni_loc, ...RECTANGLE_COLOR);
-  gl.uniform2f(translation_uni_loc, ...current_translation_);
+  gl.uniform2f(translation_uni_loc, ...xy_);
 
   // Create buffers.
   let position_buffer = gl.createBuffer();
@@ -195,28 +195,26 @@ document.addEventListener('DOMContentLoaded', event => {
   window.requestAnimationFrame(animation_loop);
 
   let then = 0;
-  let step = 1; // Pixel per millisecond.
+  let step = 2; // Pixel per millisecond.
   function update(timestamp) {
     // 1 px / 1 ms * delta ms.
     let delta = timestamp - then;
     console.log(delta);
-    let ty = step * delta;
+    let yd = step * delta;
     then = timestamp;
 
-    if (pressed_keys_.has('ArrowUp') && current_translation_[1]  - ty >= 0) {
-      current_translation_[1] -= ty;
-    }
+    if (pressed_keys_.has('ArrowUp'))
+      xy_[1] = Math.max(xy_[1] - yd, 0);
 
-    if (pressed_keys_.has('ArrowDown') && current_translation_[1] + ty <= gl.canvas.height - RECTANGLE_HEIGHT) {
-      current_translation_[1] += ty;
-    }
+    if (pressed_keys_.has('ArrowDown'))
+      xy_[1] = Math.min(xy_[1] + yd, gl.canvas.height - RECTANGLE_HEIGHT);
   };
 
   function render() {
     gl.clearColor(...BACKGROUND_COLOR);
     gl.clear(gl.COLOR_BUFFER_BIT);
 
-    gl.uniform2f(translation_uni_loc, ...current_translation_);
+    gl.uniform2f(translation_uni_loc, ...xy_);
 
     gl.drawArrays(
       gl.TRIANGLES /* primitiveType */,
