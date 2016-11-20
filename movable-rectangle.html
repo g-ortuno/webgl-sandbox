@@ -115,6 +115,8 @@ document.addEventListener('DOMContentLoaded', event => {
   let RECTANGLE_HEIGHT = 200;
   let P1_OFFSET = 50;
 
+  let current_translation_ = [0, 0];
+
   let pressed_keys_ = new Set();
   window.addEventListener('keydown', (event) => {
     pressed_keys_.add(event.key);
@@ -131,19 +133,6 @@ document.addEventListener('DOMContentLoaded', event => {
   }
   resize(canvas);
   gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
-
-  // Set up update loop.
-  let step = 10;
-  let current_translation_ = [0, 0];
-  let update_translation = () => {
-    if (pressed_keys_.has('ArrowUp') && current_translation_[1]  - step >= 0)
-      current_translation_[1] -= step;
-
-    if (pressed_keys_.has('ArrowDown') &&
-      current_translation_[1] + step <= gl.canvas.height - RECTANGLE_HEIGHT)
-      current_translation_[1] += step;
-  };
-  window.setInterval(update_translation, 1);
 
   // Set up program.
   let vertex_shader_src = document.getElementById('2d-vertex-shader');
@@ -200,9 +189,27 @@ document.addEventListener('DOMContentLoaded', event => {
 
   let animation_loop = (timestamp) => {
     window.requestAnimationFrame(animation_loop);
+    update(timestamp);
     render();
   };
   window.requestAnimationFrame(animation_loop);
+
+  let then = 0;
+  let step = 4; // Pixel per millisecond.
+  function update(timestamp) {
+    // 10 px / 1 ms * delta ms.
+    let delta = timestamp - then;
+    let ty = step * delta;
+    then = timestamp;
+
+    if (pressed_keys_.has('ArrowUp') && current_translation_[1]  - ty >= 0) {
+      current_translation_[1] -= ty;
+    }
+
+    if (pressed_keys_.has('ArrowDown') && current_translation_[1] + ty <= gl.canvas.height - RECTANGLE_HEIGHT) {
+      current_translation_[1] += ty;
+    }
+  };
 
   function render() {
     gl.clearColor(...BACKGROUND_COLOR);
