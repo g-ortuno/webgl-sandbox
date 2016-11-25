@@ -21,11 +21,12 @@
 <body>
   <canvas id="glcanvas"></canvas>
 </body>
-<script id="2d-vertex-shader" type="notjs">
+<script src="utils.js"></script>
+<script id="2d-vertex-shader" type="notjs">#version 300 es
 /* Provices Coordinates to WebGL */
 
 // An attribute will receive data from a buffer.
-attribute vec2 a_position;
+in vec2 a_position;
 
 uniform vec2 u_resolution;
 uniform vec2 u_translation;
@@ -46,17 +47,17 @@ void main() {
 }
 </script>
 
-<script id="2d-fragment-shader" type="notjs">
+<script id="2d-fragment-shader" type="notjs">#version 300 es
 /* Provides Color to WebGL */
 
 precision mediump float;
 
+out vec4 outColor;
+
 uniform vec4 u_color;
 
 void main() {
-  // gl_FlagColor is a special variable that a fragment
-  // shader is supposed to set.
-  gl_FragColor = u_color;
+  outColor = u_color;
 }
 </script>
 
@@ -161,6 +162,8 @@ document.addEventListener('DOMContentLoaded', event => {
   let position_buffer = gl.createBuffer();
 
   // Set up VAO.
+  let vao = gl.createVertexArray();
+  gl.bindVertexArray(vao);
   gl.enableVertexAttribArray(position_attr_loc);
   gl.bindBuffer(gl.ARRAY_BUFFER, position_buffer);
   gl.vertexAttribPointer(
@@ -194,19 +197,28 @@ document.addEventListener('DOMContentLoaded', event => {
   };
   window.requestAnimationFrame(animation_loop);
 
+  let up = false;
   let then = 0;
-  let step = 2; // Pixel per millisecond.
+  let step = 15.05625; // Pixel per millisecond.
   function update(timestamp) {
     // 1 px / 1 ms * delta ms.
     let delta = timestamp - then;
     let yd = step * delta;
     then = timestamp;
 
-    if (pressed_keys_.has('ArrowUp'))
+    if (up) {
       xy_[1] = Math.max(xy_[1] - yd, 0);
-
-    if (pressed_keys_.has('ArrowDown'))
+      up = xy_[1] !== 0;
+    } else {
       xy_[1] = Math.min(xy_[1] + yd, gl.canvas.height - RECTANGLE_HEIGHT);
+      up = xy_[1] === gl.canvas.height - RECTANGLE_HEIGHT;
+    }
+
+    /* if (pressed_keys_.has('ArrowUp'))
+       xy_[1] = Math.max(xy_[1] - yd, 0);
+
+       if (pressed_keys_.has('ArrowDown'))
+       xy_[1] = Math.min(xy_[1] + yd, gl.canvas.height - RECTANGLE_HEIGHT); */
   };
 
   function render() {
